@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 require('dotenv').config();
 
 interface InventoryProps {
-  client: ImmutableXClient,
-  link: Link,
-  wallet: string
+  client: ImmutableXClient;
+  link: Link;
+  wallet: string;
 }
 
-const Inventory = ({client, link, wallet}: InventoryProps) => {
+const Inventory = ({ client, link, wallet }: InventoryProps) => {
   const [inventory, setInventory] = useState<ImmutableMethodResults.ImmutableGetAssetsResult>(Object);
   // minting
   const [mintTokenId, setMintTokenId] = useState('');
@@ -24,34 +24,33 @@ const Inventory = ({client, link, wallet}: InventoryProps) => {
   const [sellCancelOrder, setSellCancelOrder] = useState('');
 
   useEffect(() => {
-    load()
-  }, [])
+    load();
+  }, []);
 
   async function load(): Promise<void> {
-    setInventory(await client.getAssets({user: wallet, sell_orders: true}))
-  };
+    setInventory(await client.getAssets({ user: wallet, sell_orders: true }));
+  }
 
   // sell an asset
   async function sellNFT() {
     await link.sell({
       amount: sellAmount,
       tokenId: sellTokenId,
-      tokenAddress: sellTokenAddress
-    })
-    setInventory(await client.getAssets({user: wallet, sell_orders: true}))
-  };
+      tokenAddress: sellTokenAddress,
+    });
+    setInventory(await client.getAssets({ user: wallet, sell_orders: true }));
+  }
 
   // cancel sell order
   async function cancelSell() {
     await link.cancel({
-      orderId: sellCancelOrder
-    })
-    setInventory(await client.getAssets({user: wallet, sell_orders: true}))
-  };
+      orderId: sellCancelOrder,
+    });
+    setInventory(await client.getAssets({ user: wallet, sell_orders: true }));
+  }
 
   // helper function to generate random ids
-  function random()
-    : number {
+  function random(): number {
     const min = 1;
     const max = 1000000000;
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -61,101 +60,120 @@ const Inventory = ({client, link, wallet}: InventoryProps) => {
   async function mint() {
     // initialise a client with the minter for your NFT smart contract
     const provider = new ethers.providers.JsonRpcProvider(`https://eth-ropsten.alchemyapi.io/v2/${process.env.REACT_APP_ALCHEMY_API_KEY}`);
-    
-    /**
-    //if you want to mint on a back end server you can also provide the private key of your wallet directly to the minter. 
+
+    //if you want to mint on a back end server you can also provide the private key of your wallet directly to the minter.
     //Please note: you should never share your private key and so ensure this is only done on a server that is not accessible from the internet
     const minterPrivateKey: string = process.env.REACT_APP_MINTER_PK ?? ''; // registered minter for your contract
     const minter = new ethers.Wallet(minterPrivateKey).connect(provider);
-    **/
-    const minter = new ethers.providers.Web3Provider(window.ethereum).getSigner(); //get Signature from Metamask wallet
+
+    // @ts-ignore
+    // const minter = new ethers.providers.Web3Provider(window.ethereum).getSigner(); //get Signature from Metamask wallet
     const publicApiUrl: string = process.env.REACT_APP_ROPSTEN_ENV_URL ?? '';
     const starkContractAddress: string = process.env.REACT_APP_ROPSTEN_STARK_CONTRACT_ADDRESS ?? '';
     const registrationContractAddress: string = process.env.REACT_APP_ROPSTEN_REGISTRATION_ADDRESS ?? '';
-    const minterClient = await ImmutableXClient.build({
+
+    try {
+      const minterClient = await ImmutableXClient.build({
         publicApiUrl,
         signer: minter,
         starkContractAddress,
         registrationContractAddress,
-    })
+      });
 
-    // mint any number of NFTs to specified wallet address (must be registered on Immutable X first)
-    const token_address: string = process.env.REACT_APP_TOKEN_ADDRESS ?? ''; // contract registered by Immutable
-    const result = await minterClient.mint({
-      mints: [{
-          etherKey: wallet,
-          tokens: [{
-              type: MintableERC721TokenType.MINTABLE_ERC721,
-              data: {
+      // mint any number of NFTs to specified wallet address (must be registered on Immutable X first)
+      const token_address: string = process.env.REACT_APP_TOKEN_ADDRESS ?? ''; // contract registered by Immutable
+      const result = await minterClient.mint({
+        mints: [
+          {
+            etherKey: wallet,
+            tokens: [
+              {
+                type: MintableERC721TokenType.MINTABLE_ERC721,
+                data: {
                   id: mintTokenId, // this is the ERC721 token id
                   blueprint: mintBlueprint, // this is passed to your smart contract at time of withdrawal from L2
                   tokenAddress: token_address.toLowerCase(),
-              }
-          }],
-          nonce: random().toString(10),
-          authSignature: ''
-      }]
-    });
-    console.log(`Token minted: ${result.results[0].token_id}`);
-    setInventory(await client.getAssets({user: wallet, sell_orders: true}))
-  };
+                },
+              },
+            ],
+            nonce: random().toString(10),
+            authSignature: '',
+          },
+        ],
+      });
+      console.log(`Token minted: ${result.results[0].token_id}`);
+      setInventory(await client.getAssets({ user: wallet, sell_orders: true }));
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
-async function mintv2() {
+  async function mintv2() {
     // initialise a client with the minter for your NFT smart contract
     const provider = new ethers.providers.JsonRpcProvider(`https://eth-ropsten.alchemyapi.io/v2/${process.env.REACT_APP_ALCHEMY_API_KEY}`);
-        
+
     /**
     //if you want to mint on a back end server you can also provide the private key of your wallet directly to the minter. 
     //Please note: you should never share your private key and so ensure this is only done on a server that is not accessible from the internet
     const minterPrivateKey: string = process.env.REACT_APP_MINTER_PK ?? ''; // registered minter for your contract
     const minter = new ethers.Wallet(minterPrivateKey).connect(provider);
     **/
+    // @ts-ignore
     const minter = new ethers.providers.Web3Provider(window.ethereum).getSigner(); //get Signature from Metamask wallet
     const publicApiUrl: string = process.env.REACT_APP_ROPSTEN_ENV_URL ?? '';
     const starkContractAddress: string = process.env.REACT_APP_ROPSTEN_STARK_CONTRACT_ADDRESS ?? '';
     const registrationContractAddress: string = process.env.REACT_APP_ROPSTEN_REGISTRATION_ADDRESS ?? '';
     const minterClient = await ImmutableXClient.build({
-        publicApiUrl,
-        signer: minter,
-        starkContractAddress,
-        registrationContractAddress,
-    })
+      publicApiUrl,
+      signer: minter,
+      starkContractAddress,
+      registrationContractAddress,
+    });
 
     // mint any number of NFTs to specified wallet address (must be registered on Immutable X first)
     const token_address: string = process.env.REACT_APP_TOKEN_ADDRESS ?? ''; // contract registered by Immutable
     const royaltyRecieverAddress: string = process.env.REACT_APP_ROYALTY_ADDRESS ?? '';
     const tokenReceiverAddress: string = process.env.REACT_APP_TOKEN_RECEIVER_ADDRESS ?? '';
-    const result = await minterClient.mintV2([{
-           users: [{
-                     etherKey: tokenReceiverAddress.toLowerCase(),
-                     tokens: [{
-                                id: mintTokenIdv2,
-                                blueprint: mintBlueprintv2,
-                                // overriding royalties for specific token
-                                royalties: [{                                        
-                                        recipient: tokenReceiverAddress.toLowerCase(),
-                                        percentage: 3.5
-                                    }],
-                            }]
-                    }],
-                contractAddress: token_address.toLowerCase(),
+    const result = await minterClient.mintV2([
+      {
+        users: [
+          {
+            etherKey: tokenReceiverAddress.toLowerCase(),
+            tokens: [
+              {
+                id: mintTokenIdv2,
+                blueprint: mintBlueprintv2,
+                // overriding royalties for specific token
+                royalties: [
+                  {
+                    recipient: tokenReceiverAddress.toLowerCase(),
+                    percentage: 3.5,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        contractAddress: token_address.toLowerCase(),
 
-                // globally set royalties
-                royalties: [{
-                        recipient: tokenReceiverAddress.toLowerCase(),
-                        percentage: 4.0
-                    }]
-            }]
-    );
+        // globally set royalties
+        royalties: [
+          {
+            recipient: tokenReceiverAddress.toLowerCase(),
+            percentage: 4.0,
+          },
+        ],
+      },
+    ]);
     console.log(`Token minted: ${result}`);
-    setInventory(await client.getAssets({user: wallet, sell_orders: true}))
-  };
+    setInventory(await client.getAssets({ user: wallet, sell_orders: true }));
+  }
 
   return (
     <div>
       <div>
         Mint NFT:
-        <br/>
+        <br />
         <label>
           Token ID:
           <input type="text" value={mintTokenId} onChange={e => setMintTokenId(e.target.value)} />
@@ -168,7 +186,7 @@ async function mintv2() {
       </div>
       <div>
         MintV2 - with Royalties NFT:
-        <br/>
+        <br />
         <label>
           Token ID:
           <input type="text" value={mintTokenIdv2} onChange={e => setMintTokenIdv2(e.target.value)} />
@@ -179,10 +197,10 @@ async function mintv2() {
         </label>
         <button onClick={mintv2}>MintV2</button>
       </div>
-      <br/>
+      <br />
       <div>
         Sell asset (create sell order):
-        <br/>
+        <br />
         <label>
           Amount (ETH):
           <input type="text" value={sellAmount} onChange={e => setSellAmount(e.target.value)} />
@@ -197,23 +215,25 @@ async function mintv2() {
         </label>
         <button onClick={sellNFT}>Sell</button>
       </div>
-      <br/>
+      <br />
       <div>
         Cancel sell order:
-        <br/>
+        <br />
         <label>
           Order ID:
           <input type="text" value={sellCancelOrder} onChange={e => setSellCancelOrder(e.target.value)} />
         </label>
         <button onClick={cancelSell}>Cancel</button>
       </div>
-      <br/><br/><br/>
+      <br />
+      <br />
+      <br />
       <div>
         Inventory:
         {JSON.stringify(inventory.result)}
       </div>
     </div>
   );
-}
+};
 
 export default Inventory;
